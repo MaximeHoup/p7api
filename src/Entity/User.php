@@ -12,27 +12,27 @@ class User
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(["getUsers", "getClients"])]
+    #[Groups(["getUsers", "getDetailUser"])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getUsers", "getClients"])]
+    #[Groups(["getUsers", "getDetailUser"])]
     private ?string $firstName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getUsers", "getClients"])]
+    #[Groups(["getUsers", "getDetailUser"])]
     private ?string $lastName = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getUsers", "getClients"])]
+    #[Groups(["getUsers", "getDetailUser"])]
     private ?string $email = null;
 
     #[ORM\Column(length: 255)]
     private ?string $password = null;
 
     #[ORM\ManyToOne(inversedBy: 'users')]
-    #[Groups(["getUsers"])]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(["getDetailUser"])]
     private ?Client $client = null;
 
     public function getId(): ?int

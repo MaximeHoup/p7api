@@ -3,7 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\Client;
-use App\Repository\ClientRepository;
+use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,18 +14,29 @@ use Symfony\Component\Serializer\SerializerInterface;
 
 class ClientController extends AbstractController
 {
-    #[Route('/api/clients', name: 'client', methods: ['GET'])]
-    public function getClientList(ClientRepository $clientRepository, SerializerInterface $serializer): JsonResponse
+    #[Route('/api/clients/{id}/users', name: 'detailclient', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
+    public function getUserList(Client $client, SerializerInterface $serializer): JsonResponse
     {
-        $clientList = $clientRepository->findAll();
-        $jsonClientList = $serializer->serialize($clientList, 'json', ['groups' => 'getClients']);
-        return new JsonResponse($jsonClientList, Response::HTTP_OK, [], true);
+        $jsonClient = $serializer->serialize($client, 'json', ['groups' => 'getUsers']);
+        return new JsonResponse($jsonClient, Response::HTTP_OK, ['accept' => 'json'], true);
     }
 
-    #[Route('/api/clients/{id}', name: 'detailclient', methods: ['GET'])]
-    public function getDetailClient(Client $client, SerializerInterface $serializer): JsonResponse
+    #[Route('/api/users/{id}', name: 'detailuser', methods: ['GET'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
+    public function getDetailUser(User $user, SerializerInterface $serializer): JsonResponse
     {
-        $jsonClient = $serializer->serialize($client, 'json', ['groups' => 'getClients']);
-        return new JsonResponse($jsonClient, Response::HTTP_OK, ['accept' => 'json'], true);
+        $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getDetailUser']);
+        return new JsonResponse($jsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
+    }
+
+    #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
+    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
+    public function deleteUser(User $user, EntityManagerInterface $em): JsonResponse
+    {
+        $em->remove($user);
+        $em->flush();
+
+        return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
 }
