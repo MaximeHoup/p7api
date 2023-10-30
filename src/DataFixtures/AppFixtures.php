@@ -50,7 +50,6 @@ class AppFixtures extends Fixture
             $user->setFirstName("Firstname " . $i);
             $user->setLastName("Lastname" . $i);
             $user->setEmail('user' . $i . '@email.fr');
-            $user->setPassword('passworduser' . $i);
             $user->setClient($listclient[array_rand($listclient)]);
             $manager->persist($user);
         }
