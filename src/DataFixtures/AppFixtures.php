@@ -20,10 +20,10 @@ class AppFixtures extends Fixture
 
     public function load(ObjectManager $manager): void
     {
-        for ($i = 1; $i <= 10; $i++) {
-            $phone = new Phone;
-            $phone->setName('Téléphone n°' . $i);
-            $phone->setDescription('Description du téléphone' . $i);
+        for ($i = 1; $i <= 10; ++$i) {
+            $phone = new Phone();
+            $phone->setName('Téléphone n°'.$i);
+            $phone->setDescription('Description du téléphone'.$i);
             $phone->setPrice($i);
             $manager->persist($phone);
         }
@@ -32,24 +32,24 @@ class AppFixtures extends Fixture
         $client = new Client();
         $client->setName('Client');
         $client->setEmail('client@mail.fr');
-        $client->setPassword($this->userPasswordHasher->hashPassword($client, "password"));
-        $client->setRoles(["ROLE_USER"]);
+        $client->setPassword($this->userPasswordHasher->hashPassword($client, 'password'));
+        $client->setRoles(['ROLE_USER']);
         $manager->persist($client);
         $listclient[] = $client;
 
         $clientAdmin = new Client();
         $clientAdmin->setName('Client admin');
         $clientAdmin->setEmail('clientadmin@mail.fr');
-        $clientAdmin->setPassword($this->userPasswordHasher->hashPassword($clientAdmin, "password"));
-        $clientAdmin->setRoles(["ROLE_ADMIN"]);
+        $clientAdmin->setPassword($this->userPasswordHasher->hashPassword($clientAdmin, 'password'));
+        $clientAdmin->setRoles(['ROLE_ADMIN']);
         $manager->persist($clientAdmin);
         $listclient[] = $clientAdmin;
 
-        for ($i = 1; $i <= 10; $i++) {
+        for ($i = 1; $i <= 10; ++$i) {
             $user = new User();
-            $user->setFirstName("Firstname " . $i);
-            $user->setLastName("Lastname" . $i);
-            $user->setEmail('user' . $i . '@email.fr');
+            $user->setFirstName('Firstname '.$i);
+            $user->setLastName('Lastname'.$i);
+            $user->setEmail('user'.$i.'@email.fr');
             $user->setClient($listclient[array_rand($listclient)]);
             $manager->persist($user);
         }

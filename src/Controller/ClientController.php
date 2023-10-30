@@ -14,30 +14,45 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Contracts\Cache\ItemInterface;
+use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 class ClientController extends AbstractController
 {
-    #[Route('/api/clients/{id}/users', name: 'detailClient', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getUserList(Client $client, SerializerInterface $serializer): JsonResponse
+    #[Route('/api/clients/{id}/users', name: 'userList', methods: ['GET'])]
+    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
+    public function getUserList(Client $client, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
     {
-        $jsonClient = $serializer->serialize($client, 'json', ['groups' => 'getUsers']);
-        return new JsonResponse($jsonClient, Response::HTTP_OK, ['accept' => 'json'], true);
+        $idCache = 'getUsersList';
+        $jsonUserList = $cache->get($idCache, function (ItemInterface $item) use ($serializer) {
+            $item->tag('UsersCache');
+
+            return $serializer->serialize($item, 'json', ['groups' => 'getDetailUser']);
+        });
+        $jsonUserList = $serializer->serialize($client, 'json', ['groups' => 'getUsers']);
+
+        return new JsonResponse($jsonUserList, Response::HTTP_OK, ['accept' => 'json'], true);
     }
 
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getDetailUser(User $user, SerializerInterface $serializer): JsonResponse
+    #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
+    public function getDetailUser(User $user, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
     {
+        $idCache = 'getDetailUser';
+        $jsonUser = $cache->get($idCache, function (ItemInterface $item) use ($serializer) {
+            $item->tag('DetailUserCache');
+
+            return $serializer->serialize($item, 'json', ['groups' => 'getDetailUser']);
+        });
         $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getDetailUser']);
+
         return new JsonResponse($jsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
     }
 
-    #[Route('/api/clients/{id}/users', name: "createUser", methods: ['POST'])]
+    #[Route('/api/clients/{id}/users', name: 'createUser', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function createUser(Client $client, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator): JsonResponse
+    public function createUser(Client $client, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator, TagAwareCacheInterface $cachePool): JsonResponse
     {
-
         $user = $serializer->deserialize($request->getContent(), User::class, 'json');
 
         // On vérifie les erreurs
@@ -46,22 +61,22 @@ class ClientController extends AbstractController
         if ($errors->count() > 0) {
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
-
         $client->addUser($user);
+        $cachePool->invalidateTags(['UsersCache']);
         $em->persist($user);
         $em->flush();
 
         $jsonUser = $serializer->serialize($user, 'json', ['groups' => 'getUsers']);
-
         $location = $urlGenerator->generate('detailUser', ['id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        return new JsonResponse($jsonUser, Response::HTTP_CREATED, ["Location" => $location], true);
+        return new JsonResponse($jsonUser, Response::HTTP_CREATED, ['Location' => $location], true);
     }
 
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function deleteUser(User $user, EntityManagerInterface $em): JsonResponse
+    public function deleteUser(User $user, EntityManagerInterface $em, TagAwareCacheInterface $cachePool): JsonResponse
     {
+        $cachePool->invalidateTags(['UsersCache', 'DetailUserCache']);
         $em->remove($user);
         $em->flush();
 
