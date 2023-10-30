@@ -6,9 +6,9 @@ use App\Repository\ClientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
 class Client implements UserInterface, PasswordAuthenticatedUserInterface
@@ -16,19 +16,19 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(["getUsers", "getDetailUser"])]
+    #[Groups(['getUsers', 'getDetailUser'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getUsers", "getDetailUser"])]
+    #[Groups(['getUsers', 'getDetailUser'])]
     private ?string $name = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(["getUsers"])]
+    #[Groups(['getUsers'])]
     private ?string $email = null;
 
     #[ORM\OneToMany(mappedBy: 'client', targetEntity: User::class, orphanRemoval: true)]
-    #[Groups(["getUsers"])]
+    #[Groups(['getUsers'])]
     private Collection $users;
 
     #[ORM\Column(length: 255)]
@@ -58,8 +58,6 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
 
         return $this;
     }
-
-
 
     /**
      * @return Collection<int, User>
@@ -115,8 +113,6 @@ class Client implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * Méthode getClientname qui permet de retourner le champ qui est utilisé pour l'authentification.
-     *
-     * @return string
      */
     public function getClientname(): string
     {
