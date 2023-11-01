@@ -9,7 +9,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Serializer\SerializerInterface;
+use JMS\Serializer\SerializerInterface;
 use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
@@ -30,7 +30,7 @@ class PhoneController extends AbstractController
         return new JsonResponse($jsonPhoneList, Response::HTTP_OK, [], true);
     }
 
-    #[Route('/api/phones/{id}', name: 'detailphone', methods: ['GET'])]
+    #[Route('/api/phones/{id}', name: 'detailPhone', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
     public function getDetailPhone(Phone $phone, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
     {
