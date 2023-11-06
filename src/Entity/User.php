@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use JMS\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 use Hateoas\Configuration\Annotation as Hateoas;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 /**
  * @Hateoas\Relation(
@@ -28,6 +29,7 @@ use Hateoas\Configuration\Annotation as Hateoas;
  * )
  */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[UniqueEntity("email")]
 class User
 {
     #[ORM\Id]
@@ -53,7 +55,6 @@ class User
     #[Assert\NotBlank(message: "L'email de l'utilisateur est obligatoire")]
     #[Assert\Length(min: 1, max: 255, minMessage: "L'email doit faire au moins {{ limit }} caractères", maxMessage: "L'email ne peut pas faire plus de {{ limit }} caractères")]
     #[Assert\Email(message: "L'email saisi n'est pas valide")]
-    #[Assert\Unique(message: 'Cet email existe déjà')]
     private ?string $email = null;
 
     #[ORM\ManyToOne(inversedBy: 'users')]
