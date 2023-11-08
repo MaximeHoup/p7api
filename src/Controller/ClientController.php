@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\Client;
 use App\Entity\User;
+use App\Repository\ClientRepository;
+use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializationContext;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
@@ -39,6 +41,16 @@ class ClientController extends AbstractController
      *     in="path",
      *     description="L'id du client"
      * )
+     * @OA\Parameter(
+     *     name="offset",
+     *     in="query",
+     *     description="La page que l'on veut afficher (défaut: 1)"
+     * )
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="Le nombre maximum d'utilisateurs affichés par page (défaut: 3)"
+     * )
      * @OA\Tag(name="Users")
      *
      * @param Client $client
@@ -47,19 +59,15 @@ class ClientController extends AbstractController
      */
     #[Route('/api/clients/{id}/users', name: 'userList', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getUserList(Client $client, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
+    public function getUserList(Client $client, UserRepository $userRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache, Request $request): JsonResponse
     {
-        $idCache = 'getUsersList';
-        $jsonUserList = $cache->get($idCache, function (ItemInterface $item) use ($serializer) {
-            $item->tag('UsersCache');
-
-            $context = SerializationContext::create()->setGroups(['getDetailUser']);
-            return $serializer->serialize($item, 'json', $context);
-        });
+        $offset = $request->get('offset', 1);
+        $limit = $request->get('limit', 3);
+        $clientid = $client->getId();
+        $userList = $userRepository->findUsersWithPagination($clientid, $offset, $limit);
         $context = SerializationContext::create()->setGroups(['getUsers']);
-        $jsonUserList = $serializer->serialize($client, 'json', $context);
-
-        return new JsonResponse($jsonUserList, Response::HTTP_OK, ['accept' => 'json'], true);
+        $jsonClient = $serializer->serialize($userList, 'json', $context);
+        return new JsonResponse($jsonClient, Response::HTTP_OK, ['accept' => 'json'], true);
     }
 
     /**

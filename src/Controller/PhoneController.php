@@ -15,6 +15,7 @@ use Symfony\Contracts\Cache\TagAwareCacheInterface;
 use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Annotations as OA;
+use Symfony\Component\HttpFoundation\Request;
 
 class PhoneController extends AbstractController
 {
@@ -29,6 +30,16 @@ class PhoneController extends AbstractController
      *        @OA\Items(ref=@Model(type=Phone::class))
      *     )
      * )
+     * @OA\Parameter(
+     *     name="offset",
+     *     in="query",
+     *     description="La page que l'on veut afficher (défaut: 1)"
+     * )
+     * @OA\Parameter(
+     *     name="limit",
+     *     in="query",
+     *     description="Le nombre maximum de téléphones affichés par page (défaut: 3)"
+     * )
      * @OA\Tag(name="Phones")
      *
      * @param PhoneRepository $phoneRepository
@@ -37,15 +48,14 @@ class PhoneController extends AbstractController
      */
     #[Route('/api/phones', name: 'phone', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getPhoneList(PhoneRepository $phoneRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
+    public function getPhoneList(PhoneRepository $phoneRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache, Request $request): JsonResponse
     {
-        $idCache = 'getAllPhones';
-        $jsonPhoneList = $cache->get($idCache, function (ItemInterface $item) use ($phoneRepository, $serializer) {
-            $item->tag('phonesCache');
-            $phoneList = $phoneRepository->findAll();
 
-            return $serializer->serialize($phoneList, 'json');
-        });
+        $offset = $request->get('offset', 1);
+        $limit = $request->get('limit', 3);
+        $phoneList = $phoneRepository->findAllWithPagination($offset, $limit);
+        $jsonPhoneList = $serializer->serialize($phoneList, 'json');
+
 
         return new JsonResponse($jsonPhoneList, Response::HTTP_OK, [], true);
     }
