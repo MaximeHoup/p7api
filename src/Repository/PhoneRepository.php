@@ -26,6 +26,7 @@ class PhoneRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('b')
             ->setFirstResult(($offset - 1) * $limit)
             ->setMaxResults($limit);
+
         return $qb->getQuery()->getResult();
     }
 

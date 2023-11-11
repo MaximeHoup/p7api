@@ -4,10 +4,10 @@ namespace App\Entity;
 
 use App\Repository\UserRepository;
 use Doctrine\ORM\Mapping as ORM;
-use JMS\Serializer\Annotation\Groups;
-use Symfony\Component\Validator\Constraints as Assert;
 use Hateoas\Configuration\Annotation as Hateoas;
+use JMS\Serializer\Annotation\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * @Hateoas\Relation(
@@ -18,7 +18,6 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
  *      ),
  *      exclusion = @Hateoas\Exclusion(groups="getUsers")
  * )
- *
  * @Hateoas\Relation(
  *      "delete",
  *      href = @Hateoas\Route(
@@ -29,7 +28,7 @@ use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
  * )
  */
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[UniqueEntity("email")]
+#[UniqueEntity('email')]
 class User
 {
     #[ORM\Id]
