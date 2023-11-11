@@ -15,7 +15,6 @@ use Hateoas\Configuration\Annotation as Hateoas;
  *          parameters = { "id" = "expr(object.getId())" }
  *      )
  * )
- *
  */
 #[ORM\Entity(repositoryClass: PhoneRepository::class)]
 class Phone

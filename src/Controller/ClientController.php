@@ -4,10 +4,14 @@ namespace App\Controller;
 
 use App\Entity\Client;
 use App\Entity\User;
-use App\Repository\ClientRepository;
 use App\Repository\UserRepository;
+use App\Service\CacheService;
+use App\Service\VersioningService;
 use Doctrine\ORM\EntityManagerInterface;
 use JMS\Serializer\SerializationContext;
+use JMS\Serializer\SerializerInterface;
+use Nelmio\ApiDocBundle\Annotation\Model;
+use OpenApi\Annotations as OA;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,27 +19,32 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use JMS\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
-use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\Cache\TagAwareCacheInterface;
-use Nelmio\ApiDocBundle\Annotation\Model;
-use Nelmio\ApiDocBundle\Annotation\Security;
-use OpenApi\Annotations as OA;
 
 class ClientController extends AbstractController
 {
+    public function __construct(
+        private SerializerInterface $serializer,
+        private TagAwareCacheInterface $cache,
+        private VersioningService $versioningService
+    ) {
+    }
+
     /**
      * Cette méthode permet de récupérer l'ensemble des utilisateurs liés à un client.
      *
      * @OA\Response(
      *     response=200,
      *     description="Retourne la liste des utilisateurs liés à un client",
+     *
      *     @OA\JsonContent(
      *        type="array",
+     *
      *        @OA\Items(ref=@Model(type=Client::class))
      *     )
      * )
+     *
      * @OA\Parameter(
      *     name="id",
      *     in="path",
@@ -51,23 +60,28 @@ class ClientController extends AbstractController
      *     in="query",
      *     description="Le nombre maximum d'utilisateurs affichés par page (défaut: 3)"
      * )
-     * @OA\Tag(name="Users")
      *
-     * @param Client $client
-     * @param SerializerInterface $serializer
-     * @return JsonResponse
+     * @OA\Tag(name="Users")
      */
     #[Route('/api/clients/{id}/users', name: 'userList', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getUserList(Client $client, UserRepository $userRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache, Request $request): JsonResponse
+    public function getUserList(Client $client, UserRepository $userRepository, SerializerInterface $serializer, Request $request, VersioningService $versioningService, CacheService $cacheService): JsonResponse
     {
         $offset = $request->get('offset', 1);
         $limit = $request->get('limit', 3);
         $clientid = $client->getId();
         $userList = $userRepository->findUsersWithPagination($clientid, $offset, $limit);
-        $context = SerializationContext::create()->setGroups(['getUsers']);
-        $jsonClient = $serializer->serialize($userList, 'json', $context);
-        return new JsonResponse($jsonClient, Response::HTTP_OK, ['accept' => 'json'], true);
+
+        $version = $versioningService->getVersion();
+        $context = SerializationContext::create()->setVersion($version);
+
+        $cacheKey = 'getUserList-'.$offset.'-'.$limit;
+        $context->setGroups(['getUsers']);
+
+        $jsonUserList = $serializer->serialize($userList, 'json', $context);
+        $cacheJsonUserList = $cacheService->getOrCache($cacheKey, $jsonUserList, ['getUsers']);
+
+        return new JsonResponse($cacheJsonUserList, Response::HTTP_OK, ['accept' => 'json'], true);
     }
 
     /**
@@ -76,48 +90,49 @@ class ClientController extends AbstractController
      * @OA\Response(
      *     response=200,
      *     description="Retourne l'utilisateur correspondant à l'id",
+     *
      *     @OA\JsonContent(
      *        type="array",
+     *
      *        @OA\Items(ref=@Model(type=User::class))
      *     )
      * )
+     *
      * @OA\Parameter(
      *     name="id",
      *     in="path",
      *     description="L'id de l'utilisateur"
      * )
-     * @OA\Tag(name="Users")
      *
-     * @param User $user
-     * @param SerializerInterface $serializer
-     * @return JsonResponse
+     * @OA\Tag(name="Users")
      */
     #[Route('/api/users/{id}', name: 'detailUser', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getDetailUser(User $user, SerializerInterface $serializer, TagAwareCacheInterface $cache): JsonResponse
+    public function getDetailUser(User $user, VersioningService $versioningService, SerializerInterface $serializer, CacheService $cacheService): JsonResponse
     {
-        $idCache = 'getDetailUser';
-        $jsonUser = $cache->get($idCache, function (ItemInterface $item) use ($serializer) {
-            $item->tag('DetailUserCache');
-
-            $context = SerializationContext::create()->setGroups(['getDetailUser']);
-            return $serializer->serialize($item, 'json', $context);
-        });
-        $context = SerializationContext::create()->setGroups(['getDetailUser']);
+        $version = $versioningService->getVersion();
+        $context = SerializationContext::create()->setVersion($version);
+        $userId = $user->getId();
+        $cacheKey = 'getDetailUser-'.$userId;
+        $context->setGroups(['getDetailUser']);
         $jsonUser = $serializer->serialize($user, 'json', $context);
+        $cacheJsonUser = $cacheService->getOrCache($cacheKey, $jsonUser, ['getDetailUser']);
 
-        return new JsonResponse($jsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
+        return new JsonResponse($cacheJsonUser, Response::HTTP_OK, ['accept' => 'json'], true);
     }
 
     /**
-     * Cette méthode permet de créer un utilisatuer.
+     * Cette méthode permet de créer un utilisateur.
      *
      * @OA\RequestBody(
      *     required=true,
+     *
      *     @OA\MediaType(
      *         mediaType="application/json",
+     *
      *         @OA\Schema(
      *             type="object",
+     *
      *             @OA\Property(
      *                 property="firstName",
      *                 type="string"
@@ -133,23 +148,17 @@ class ClientController extends AbstractController
      *         )
      *     )
      * )
+     *
      * @OA\Response(
      *     response=201,
      *     description="Crée l'utilisateur",
      * )
-     * @OA\Tag(name="Users")
      *
-     * @param Client $client
-     * @param Request $request
-     * @param SerializerInterface $serializer
-     * @param EntityManagerInterface $em
-     * @param UrlGeneratorInterface $urlGenerator
-     * @param ValidatorInterface $validator
-     * @return JsonResponse
+     * @OA\Tag(name="Users")
      */
     #[Route('/api/clients/{id}/users', name: 'createUser', methods: ['POST'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function createUser(Client $client, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator, TagAwareCacheInterface $cachePool): JsonResponse
+    public function createUser(Client $client, Request $request, SerializerInterface $serializer, EntityManagerInterface $em, UrlGeneratorInterface $urlGenerator, ValidatorInterface $validator, TagAwareCacheInterface $cachePool, VersioningService $versioningService): JsonResponse
     {
         $user = $serializer->deserialize($request->getContent(), User::class, 'json');
 
@@ -160,11 +169,12 @@ class ClientController extends AbstractController
             return new JsonResponse($serializer->serialize($errors, 'json'), JsonResponse::HTTP_BAD_REQUEST, [], true);
         }
         $client->addUser($user);
-        $cachePool->invalidateTags(['UsersCache']);
+        $cachePool->invalidateTags(['getUsers']);
         $em->persist($user);
         $em->flush();
-
-        $context = SerializationContext::create()->setGroups(['getUsers']);
+        $version = $versioningService->getVersion();
+        $context = SerializationContext::create()->setVersion($version);
+        $context->setGroups(['getDetailUser']);
         $jsonUser = $serializer->serialize($user, 'json', $context);
         $location = $urlGenerator->generate('detailUser', ['id' => $user->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
@@ -178,22 +188,20 @@ class ClientController extends AbstractController
      *     response=204,
      *     description="Supprime l'utilisateur correspondant à l'id"
      * )
+     *
      * @OA\Parameter(
      *     name="id",
      *     in="path",
      *     description="L'id de l'utilisateur"
      * )
-     * @OA\Tag(name="Users")
      *
-     * @param User $user
-     * @param EntityManagerInterface $em
-     * @return JsonResponse
+     * @OA\Tag(name="Users")
      */
     #[Route('/api/users/{id}', name: 'deleteUser', methods: ['DELETE'])]
     #[IsGranted('ROLE_ADMIN', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
     public function deleteUser(User $user, EntityManagerInterface $em, TagAwareCacheInterface $cachePool): JsonResponse
     {
-        $cachePool->invalidateTags(['UsersCache', 'DetailUserCache']);
+        $cachePool->invalidateTags(['getUsers', 'getDetailUser']);
         $em->remove($user);
         $em->flush();
 

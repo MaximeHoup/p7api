@@ -28,6 +28,7 @@ class UserRepository extends ServiceEntityRepository
             ->setParameter('client_id', $clientid)
             ->setFirstResult(($offset - 1) * $limit)
             ->setMaxResults($limit);
+
         return $qb->getQuery()->getResult();
     }
 
