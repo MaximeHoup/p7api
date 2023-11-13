@@ -16,7 +16,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Contracts\Cache\TagAwareCacheInterface;
 
 class PhoneController extends AbstractController
 {
@@ -49,7 +48,7 @@ class PhoneController extends AbstractController
      */
     #[Route('/api/phones', name: 'phone', methods: ['GET'])]
     #[IsGranted('ROLE_USER', message: 'Vous n\'avez pas les droits suffisants pour effectuer cette action')]
-    public function getPhoneList(PhoneRepository $phoneRepository, SerializerInterface $serializer, TagAwareCacheInterface $cache, Request $request, VersioningService $versioningService, CacheService $cacheService): JsonResponse
+    public function getPhoneList(PhoneRepository $phoneRepository, SerializerInterface $serializer, Request $request, VersioningService $versioningService, CacheService $cacheService): JsonResponse
     {
         $version = $versioningService->getVersion();
         $context = SerializationContext::create()->setVersion($version);
