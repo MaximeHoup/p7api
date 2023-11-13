@@ -4,9 +4,6 @@ Créez un web service exposant une API
 ## Environnement de développement
 * Symfony 6.3
 * Composer 2.6
-* Bootstrap 4.0.0
-* jQuery 3.2.1
-* PHPUnit 9.5
 * WampServer 3.2.6
     * Apache 2.4.51
     * PHP 8.1.4
