@@ -1,4 +1,4 @@
-# p7_OC-API Bilemo
+# P7_OC-API Bilemo
 Créez un web service exposant une API
 
 ## Environnement de développement
@@ -42,3 +42,7 @@ https://github.com/MaximeHoup/p7api.git
 ```
     php bin/console doctrine:fixtures:load
 ```
+
+7.Une fois votre serveur lancé, vous pouvez accéder à la documentation de l'API:
+```
+   https://127.0.0.1:8000/api/doc
